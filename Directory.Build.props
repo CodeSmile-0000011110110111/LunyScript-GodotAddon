@@ -1,6 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <BaseIntermediateOutputPath>LunyScript\obj\</BaseIntermediateOutputPath>
-    <MSBuildProjectExtensionsPath>LunyScript\obj\</MSBuildProjectExtensionsPath>
-  </PropertyGroup>
-</Project>
