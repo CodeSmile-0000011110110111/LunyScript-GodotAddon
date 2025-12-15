@@ -6,6 +6,9 @@ namespace Luny.Godot
     /// <summary>
     /// Ultra-thin Godot adapter: auto-initializes and forwards lifecycle to EngineLifecycleDispatcher.
     /// </summary>
+    /// <remarks>
+    /// Gets auto-instantiated by LunyBootstrap.gd which itself gets auto-added to autoload via plugin.gd.
+    /// </remarks>
     internal sealed partial class GodotLifecycleAdapter : Node
     {
         private static GodotLifecycleAdapter _instance;
@@ -14,23 +17,21 @@ namespace Luny.Godot
 
         private GodotLifecycleAdapter()
         {
-            GD.Print($"GodotLifecycleAdapter ({GetInstanceId()}) ctor");
             if (_instance != null)
             {
-                EngineLifecycleDispatcher.ThrowDuplicateAdapterException(nameof(GodotLifecycleAdapter),
+                Throw.LifecycleAdapterSingletonDuplicationException(nameof(GodotLifecycleAdapter),
                     _instance.Name, unchecked((Int64)_instance.GetInstanceId()), Name, unchecked((Int64)GetInstanceId()));
             }
 
             _instance = this;
-        }
-
-        public override void _Ready()
-        {
-            GD.Print($"GodotLifecycleAdapter ({GetInstanceId()}) _Ready");
             _dispatcher = EngineLifecycleDispatcher.Instance;
         }
 
-        public override void _EnterTree() => GD.Print($"GodotLifecycleAdapter ({GetInstanceId()}) _EnterTree");
+        public override void _Ready() => GD.Print($"GodotLifecycleAdapter ({GetInstanceId()}) _Ready");
+
+        public override void _Process(Double delta) => _dispatcher?.OnUpdate(delta);
+
+        public override void _PhysicsProcess(Double delta) => _dispatcher?.OnFixedStep(delta);
 
         public override void _ExitTree()
         {
@@ -38,32 +39,32 @@ namespace Luny.Godot
             if (_instance != null)
             {
                 Shutdown();
-                EngineLifecycleDispatcher.ThrowAdapterPrematurelyRemovedException(nameof(GodotLifecycleAdapter));
+                Throw.LifecycleAdapterPrematurelyRemovedException(nameof(GodotLifecycleAdapter));
             }
         }
-
-        public override void _Process(Double delta) => _dispatcher?.OnUpdate(delta);
-
-        public override void _PhysicsProcess(Double delta) => _dispatcher?.OnFixedStep(delta);
 
         public override void _Notification(Int32 what)
         {
-            if (what != NotificationProcess && what != NotificationPhysicsProcess)
-                GD.Print($"GodotLifecycleAdapter ({GetInstanceId()}) what={what}");
-
             switch ((Int64)what)
             {
+                case NotificationCrash:
                 case NotificationWMCloseRequest:
-                    GD.Print($"GodotLifecycleAdapter ({GetInstanceId()}) NotificationWMCloseRequest");
+                    GD.Print($"GodotLifecycleAdapter ({GetInstanceId()}) _Notification: {GetNotificationString(what)}");
                     Shutdown();
                     break;
 
-                case NotificationCrash:
-                    GD.Print($"GodotLifecycleAdapter ({GetInstanceId()}) NotificationCrash");
-                    Shutdown();
+                default:
+                    if (what != NotificationProcess && what != NotificationPhysicsProcess)
+                        GD.Print($"GodotLifecycleAdapter ({GetInstanceId()}) _Notification: {GetNotificationString(what)}");
                     break;
             }
         }
+
+        private String GetNotificationString(Int32 what) => (Int64)what switch
+        {
+            NotificationWMCloseRequest => "NotificationWMCloseRequest",
+            var _ => what.ToString(),
+        };
 
         private void Shutdown()
         {
