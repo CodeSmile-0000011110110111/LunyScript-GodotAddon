@@ -11,15 +11,15 @@ func _ensure_luny_autoload() -> void:
     add_autoload_singleton(LUNY_AUTOLOAD_NAME, res_path)
     ProjectSettings.save()
 
+func _enable_plugin() -> void:
+    _ensure_luny_autoload()
+    
+func _enter_tree() -> void:
+    _ensure_luny_autoload()
+
 func _remove_luny_autoload() -> void:
     remove_autoload_singleton(LUNY_AUTOLOAD_NAME)
     ProjectSettings.save()
 
-func _enable_plugin() -> void:
-    _ensure_luny_autoload()
-    
 func _disable_plugin() -> void:
     _remove_luny_autoload()
-
-func _enter_tree() -> void:
-    _ensure_luny_autoload()
